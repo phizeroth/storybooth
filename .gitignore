@@ -4,4 +4,7 @@
 /rec
 /state
 /tests
-settings.yaml
+client_secret.json
+credentials.json
+id.json
+json.tar

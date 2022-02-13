@@ -1,11 +1,13 @@
 #!/usr/bin/python3.7
 
-import os, time, glob, subprocess
+import os, time, glob, subprocess, json
 import psutil
 import RPi.GPIO as GPIO
 import tkinter as tk
+
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from oauth2client.service_account import ServiceAccountCredentials
 
 ## SETUP GPIO ##
 GPIO.setmode(GPIO.BCM)
@@ -110,14 +112,27 @@ def convert(filename):
 def auth(filename):
     gauth = GoogleAuth()
     drive = GoogleDrive(gauth)
-    
+    scope = 'https://www.googleapis.com/auth/drive.file'
+        
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+        
     file = filename+'.mp4'
     filesize = os.path.getsize(rec_path + file)
     print('Uploading {file} ({size} MB) to Google Drive...'.format(file=file, size=round(filesize/2**20, 3)))
     
-    gfile = drive.CreateFile({'title': filename+'.mp4', 'parents': [{'id': '1LRKlF2AI1ql865skHS91V-UJKVV4u7ZI'}]})
+    with open('id.json') as f:
+        data = json.load(f)
+        
+    gfile = drive.CreateFile({
+        'title': filename+'.mp4',
+        'parents': [{
+            'kind': 'drive#fileLink',
+            'teamDriveId': data['team_drive_id'],
+            'id': data['folder_id'],
+        }]
+    })
     gfile.SetContentFile(rec_path + file)
-    gfile.Upload()
+    gfile.Upload(param={'supportsTeamDrives': True})
     if gfile.uploaded:
         print('Upload complete!\n================\nReady...')
         return 'success'
