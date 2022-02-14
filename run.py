@@ -33,10 +33,10 @@ rec_path = '/home/pi/storybooth/rec/'
 if not os.path.isdir(hooks_path):
     subprocess.call('/home/pi/make_dirs.sh', shell=True)
 
-## adjustment variables ##
+## adjustment variables (seconds) ##
+idle_time = 30      # max time camera is on without recording before idling off
 time_limit = 120    # max record time
-idle_time = 30      # 
-blink_length = 0.5
+blink_length = 0.5  # time between red LED blinks when reminding that time is almost up
 
 ## other global variables ##
 is_ready = False
@@ -84,18 +84,16 @@ def stop_record():
     global is_recording, record_time, is_blinking
     print('Stop record...')
     GPIO.output(RED_LED_PIN, GPIO.LOW)
+    is_blinking = False
     is_recording = False
     record_time = 0
-    is_blinking = False
+    
     with open(os.path.join(hooks_path, 'stop_record'), 'w') as fp:
         pass
     print('Processing...')
     time.sleep(2)
-    print('sleep OK')
     kill_picam()
-    print('kill picam OK')
     finalize(get_latest_file())
-    print('finalize OK')
     
 def get_latest_file():
     list_of_files = glob.glob(rec_path + '*.ts')
