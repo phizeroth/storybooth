@@ -8,6 +8,7 @@ import tkinter as tk
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from oauth2client.service_account import ServiceAccountCredentials
+GoogleAuth.DEFAULT_SETTINGS['client_config_file'] = '/auth'
 
 ## SETUP GPIO ##
 GPIO.setmode(GPIO.BCM)
@@ -114,15 +115,15 @@ def auth(filename):
     drive = GoogleDrive(gauth)
     scope = 'https://www.googleapis.com/auth/drive.file'
         
-    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name('auth/credentials.json', scope)
         
     file = filename+'.mp4'
     filesize = os.path.getsize(rec_path + file)
     print('Uploading {file} ({size} MB) to Google Drive...'.format(file=file, size=round(filesize/2**20, 3)))
     
-    with open('id.json') as f:
+    with open('auth/id.json') as f:
         data = json.load(f)
-        
+    
     gfile = drive.CreateFile({
         'title': filename+'.mp4',
         'parents': [{

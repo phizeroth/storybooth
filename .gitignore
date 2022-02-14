@@ -4,7 +4,8 @@
 /rec
 /state
 /tests
+/auth
 client_secret.json
 credentials.json
 id.json
-json.tar
+auth.tar
