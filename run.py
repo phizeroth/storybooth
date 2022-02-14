@@ -121,7 +121,7 @@ def auth(filename):
     filesize = os.path.getsize(rec_path + file)
     print('Uploading {file} ({size} MB) to Google Drive...'.format(file=file, size=round(filesize/2**20, 3)))
     
-    with open('auth/id.json') as f:
+    with open('auth/folder.json') as f:
         data = json.load(f)
     
     gfile = drive.CreateFile({
