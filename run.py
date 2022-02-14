@@ -5,6 +5,7 @@ import psutil
 import RPi.GPIO as GPIO
 import tkinter as tk
 
+## Google OAuth and Drive setup ##
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from oauth2client.service_account import ServiceAccountCredentials
@@ -18,9 +19,6 @@ RED_BTN_PIN = 4
 GRN_LED_PIN = 12
 RED_LED_PIN = 18
 
-GPIO.setup(RED_LED_PIN, GPIO.OUT)
-GPIO.setup(RED_LED_PIN, GPIO.LOW)
-
 for led_pin in [RED_LED_PIN, GRN_LED_PIN]:
     GPIO.setup(led_pin, GPIO.OUT)
     GPIO.output(led_pin, GPIO.LOW)
@@ -30,24 +28,23 @@ for btn_pin in [RED_BTN_PIN, GRN_BTN_PIN]:
     GPIO.add_event_detect(btn_pin, GPIO.FALLING, bouncetime=750)
 
 ## SETUP PATHS ##
-
 hooks_path = '/home/pi/storybooth/hooks/'
 rec_path = '/home/pi/storybooth/rec/'
 if not os.path.isdir(hooks_path):
     subprocess.call('/home/pi/make_dirs.sh', shell=True)
 
-## adjustable variables ##
-time_limit = 120
-idle_time = 30
+## adjustment variables ##
+time_limit = 120    # max record time
+idle_time = 30      # 
 blink_length = 0.5
-## -------------------- ##
 
+## other global variables ##
 is_ready = False
 is_blinking = False
 is_recording = False
 record_time = 0
 
-## DEFINE FUNCTIONS ##
+### DEFINE FUNCTIONS ###
 
 def wake_display():
     CONTROL = 'vcgencmd'
@@ -177,7 +174,7 @@ def finalize(filename):
     win.after(3500, lambda:win.destroy())
     win.mainloop()
 
-## START PROGRAM ##
+### START PROGRAM ###
 
 if __name__ == '__main__':
 
@@ -200,7 +197,7 @@ if __name__ == '__main__':
                     time.sleep(1)
                     start_picam()
             
-            if (is_ready and GPIO.event_detected(RED_BTN_PIN)):
+            if is_ready and GPIO.event_detected(RED_BTN_PIN):
                 button_last_pressed_time = time.time()
                 if not is_recording:
                     start_record()
@@ -210,26 +207,26 @@ if __name__ == '__main__':
             
             if is_recording:
                 record_time = time.time() - start_record_time
-            
-            ## START BLINKING WITH X SECONDS LEFT ##
-            if is_recording and record_time > time_limit - 15 and not is_blinking:
-                is_blinking = True
-                blink_tick_start = time.time()
-            
-            if is_blinking:
-                if time.time() - blink_tick_start > blink_length:
-                    if GPIO.input(RED_LED_PIN):
-                        GPIO.output(RED_LED_PIN, GPIO.LOW)
-                    else:
-                        GPIO.output(RED_LED_PIN, GPIO.HIGH)
-                    blink_tick_start = time.time()
 
-            ## STOP RECORDING AT TIME LIMIT ##
-            if is_recording and record_time > time_limit:
-                print('Recording time limit reached.')
-                stop_record()
-                                    
-            if is_picam_running() and time.time() - button_last_pressed_time > idle_time:
+                ## START BLINKING WITH X SECONDS LEFT ##
+                if record_time > time_limit - 15 and not is_blinking:
+                    is_blinking = True
+                    blink_tick_start = time.time()
+                
+                if is_blinking:
+                    if time.time() - blink_tick_start > blink_length:
+                        if GPIO.input(RED_LED_PIN):
+                            GPIO.output(RED_LED_PIN, GPIO.LOW)
+                        else:
+                            GPIO.output(RED_LED_PIN, GPIO.HIGH)
+                        blink_tick_start = time.time()
+
+                ## STOP RECORDING AT TIME LIMIT ##
+                if record_time > time_limit:
+                    print('Recording time limit reached.')
+                    stop_record()
+
+            elif is_picam_running() and time.time() - button_last_pressed_time > idle_time:
                 print('picam idling off...')
                 kill_picam()
                 
