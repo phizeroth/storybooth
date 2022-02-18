@@ -111,20 +111,22 @@ def auth(filename):
     scope = 'https://www.googleapis.com/auth/drive.file'
         
     gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name('auth/credentials.json', scope)
-        
-    file = filename+'.mp4'
-    filesize = os.path.getsize(rec_path + file)
-    print('Uploading {file} ({size} MB) to Google Drive...'.format(file=file, size=round(filesize/2**20, 3)))
-    
+
     with open('auth/folder.json') as f:
         data = json.load(f)
+
+    file = filename+'.mp4'
+    filesize = os.path.getsize(rec_path + file)
+    print('Uploading {file} ({size} MB) to Google Drive folder: {folderName}...'.format(file=file, size=round(filesize/2**20, 3), folderName=data['location']))
     
+    location = data['location']     # get device location
+
     gfile = drive.CreateFile({
         'title': filename+'.mp4',
         'parents': [{
             'kind': 'drive#fileLink',
             'teamDriveId': data['team_drive_id'],
-            'id': data['folder_id'],
+            'id': data[location],   # set upload folder id based on location
         }]
     })
     gfile.SetContentFile(rec_path + file)
@@ -162,6 +164,7 @@ def finalize(filename):
     tk.Label(win, textvariable=v, fg='#fff', bg=abccm_blue, font=('Arial', 18)).pack(pady=20)
     win.update()
     
+    ## Process and upload video ##
     convert(filename)
     
     if (auth(filename) == 'success'):
@@ -184,6 +187,9 @@ if __name__ == '__main__':
 
     ## MAIN LOOP ##
     while True:
+
+        time.sleep(0.1)     # limit loop rate to ease CPU usage
+
         try:
             if GPIO.event_detected(GRN_BTN_PIN):
                 print('Press RECORD button to start or stop recording')
