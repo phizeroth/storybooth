@@ -116,18 +116,18 @@ def auth(filename):
     with open('auth/folder.json') as f:
         data = json.load(f)
 
-    file = filename+'.mp4'
-    filesize = os.path.getsize(rec_path + file)
-    print('Uploading {file} ({size} MB) to Google Drive folder: {folderName}...'.format(file=file, size=round(filesize/2**20, 3), folderName=data['location']))
-    
     location = data['location']     # get device location
 
+    file = filename+'.mp4'
+    filesize = os.path.getsize(rec_path + file)
+    print('Uploading {file} ({size} MB) to Google Drive folder: {folderName}...'.format(file=file, size=round(filesize/2**20, 3), folderName=location))
+    
     gfile = drive.CreateFile({
         'title': filename+'.mp4',
         'parents': [{
             'kind': 'drive#fileLink',
             'teamDriveId': data['team_drive_id'],
-            'id': data[location],   # set upload folder id based on location
+            'id': data['folder_ids'][location],   # set upload folder id based on location
         }]
     })
     gfile.SetContentFile(rec_path + file)
@@ -189,8 +189,6 @@ if __name__ == '__main__':
     ## MAIN LOOP ##
     while True:
 
-        time.sleep(0.1)     # limit loop rate to ease CPU usage
-
         try:
             if GPIO.event_detected(GRN_BTN_PIN):
                 print('Press RECORD button to start or stop recording')
@@ -234,6 +232,8 @@ if __name__ == '__main__':
             elif is_picam_running() and time.time() - button_last_pressed_time > SETTINGS['idle_time']:
                 print('picam idling off...')
                 kill_picam()
+            
+            time.sleep(0.1)     # limit loop rate to ease CPU usage
                 
         except KeyboardInterrupt:
             print('\nExiting...')
