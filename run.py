@@ -33,16 +33,21 @@ rec_path = '/home/pi/storybooth/rec/'
 if not os.path.isdir(hooks_path):
     subprocess.call('/home/pi/make_dirs.sh', shell=True)
 
-## adjustment variables (seconds) ##
-idle_time = 30      # max time camera is on without recording before idling off
-time_limit = 120    # max record time
-blink_length = 0.5  # time between red LED blinks when reminding that time is almost up
+## adjustment variables (in seconds) ##
+SETTINGS = {
+    'idle_time': 30,            # max time camera is on without recording before idling off
+    'time_limit': 120,          # max record time
+    'time_limit_warning': 15,   # seconds before time limit to start warning
+    'blink_length': 0.5         # time interval between red LED blinks during time limit warning
+    }
 
 ## other global variables ##
-is_ready = False
-is_blinking = False
-is_recording = False
-record_time = 0
+_G = {
+    'is_ready': False,
+    'is_blinking': False,
+    'is_recording': False,
+    'record_time': 0
+    }
 
 ### DEFINE FUNCTIONS ###
 
@@ -58,35 +63,31 @@ def is_picam_running():
     return False
 
 def start_picam():
-    global is_ready
     subprocess.Popen('/home/pi/picam/picam --alsadev hw:1,0 --rotation 180 -p', shell=True)
     GPIO.output(GRN_LED_PIN, GPIO.HIGH)
     time.sleep(1)
-    is_ready = True
+    _G['is_ready'] = True
     
 def kill_picam():
-    global is_ready
     for proc in psutil.process_iter():
         if proc.name() == 'picam':
             proc.kill()
     GPIO.output(GRN_LED_PIN, GPIO.LOW)
-    is_ready = False
+    _G['is_ready'] = False
 
 def start_record():
-    global is_recording
     print('Start record...')
     GPIO.output(RED_LED_PIN, GPIO.HIGH)
-    is_recording = True
+    _G['is_recording'] = True
     with open(os.path.join(hooks_path, 'start_record'), 'w') as fp:
         pass
 
 def stop_record():
-    global is_recording, record_time, is_blinking
     print('Stop record...')
     GPIO.output(RED_LED_PIN, GPIO.LOW)
-    is_blinking = False
-    is_recording = False
-    record_time = 0
+    _G['is_blinking'] = False
+    _G['is_recording'] = False
+    _G['record_time'] = 0
     
     with open(os.path.join(hooks_path, 'stop_record'), 'w') as fp:
         pass
@@ -201,24 +202,24 @@ if __name__ == '__main__':
                     time.sleep(1)
                     start_picam()
             
-            if is_ready and GPIO.event_detected(RED_BTN_PIN):
+            if _G['is_ready'] and GPIO.event_detected(RED_BTN_PIN):
                 button_last_pressed_time = time.time()
-                if not is_recording:
+                if not _G['is_recording']:
                     start_record()
                     start_record_time = time.time()
                 else:
                     stop_record()
             
-            if is_recording:
-                record_time = time.time() - start_record_time
+            if _G['is_recording']:
+                _G['record_time'] = time.time() - start_record_time
 
                 ## START BLINKING WITH X SECONDS LEFT ##
-                if record_time > time_limit - 15 and not is_blinking:
-                    is_blinking = True
+                if _G['record_time'] > SETTINGS['time_limit'] - SETTINGS['time_limit_warning'] and not _G['is_blinking']:
+                    _G['is_blinking'] = True
                     blink_tick_start = time.time()
                 
-                if is_blinking:
-                    if time.time() - blink_tick_start > blink_length:
+                if _G['is_blinking']:
+                    if time.time() - blink_tick_start > SETTINGS['blink_length']:
                         if GPIO.input(RED_LED_PIN):
                             GPIO.output(RED_LED_PIN, GPIO.LOW)
                         else:
@@ -226,11 +227,11 @@ if __name__ == '__main__':
                         blink_tick_start = time.time()
 
                 ## STOP RECORDING AT TIME LIMIT ##
-                if record_time > time_limit:
+                if _G['record_time'] > SETTINGS['time_limit']:
                     print('Recording time limit reached.')
                     stop_record()
 
-            elif is_picam_running() and time.time() - button_last_pressed_time > idle_time:
+            elif is_picam_running() and time.time() - button_last_pressed_time > SETTINGS['idle_time']:
                 print('picam idling off...')
                 kill_picam()
                 
